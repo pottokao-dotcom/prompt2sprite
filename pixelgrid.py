@@ -123,22 +123,22 @@ def detect_grid(img, scan=SCAN, phases=8):
 
 
 def looks_gridded(det, min_score=1.0, max_axis_ratio=1.25):
-    """WEAK heuristic: does this render look like it is on a pixel grid at all?
+    """Does this render look like it is on a pixel grid at all?
 
-    Treat the boolean as a hint and the numbers in `det` as the real output. This separates a grid
-    from a smooth render, and it does NOT reliably separate a simple flat sprite from soft blobby art:
-    measured on synthetic cases, sprites score 0.55-1.3 while non-grid controls score 0.47-0.67, and
-    those ranges overlap. Three other statistics were tried and are worse, each defeated by a
-    different control -- cell flatness (a smooth gradient is the flattest thing there is, 0.996),
-    the between/within-cell variance ratio (same gradient, highest score of everything at 37000),
-    and absolute hard-edge contrast (averaging |diff| down 1024 rows dilutes a real edge that only
-    30% of rows cross, to below a blurred blob's). Deciding this properly is a classifier, not a
-    threshold, and it is not what this module is for.
+    On sprite-shaped fixtures the separation is clean: sprites score 2.2-8.2 (median 4.2) against
+    0.47-0.67 for non-grid controls (smooth gradient, soft blobs, blurred noise), so min_score=1.0
+    keeps every sprite with a wide margin. See test_pixelgrid.py.
 
-    What it IS safe for: rejecting obviously-smooth output, and flagging samples for review in bulk
-    generation. `min_score` is uncalibrated -- it comes from synthetic renders, not from Klein. Run a
-    few hundred real ones, look at `score`/`contrast`/`nx` vs `ny` in the saved metadata, and set your
-    own threshold before trusting this to throw anything away.
+    That margin comes from the ONE structural feature real pixel art has and naive test images do
+    not: a hard 1px outline running around a large connected silhouette. It is a high-contrast edge
+    that lies along cell boundaries for long unbroken stretches, which is exactly what the pitch
+    scan eats. An earlier version of this docstring called the gate unusable and reported overlapping
+    ranges (sprites 0.55-1.3) -- that was measured on scattered-confetti fixtures with no outline and
+    no connected mass, and it understated the real signal by roughly 4x. The fixture was the bug.
+
+    Still uncalibrated against Klein itself: these numbers come from synthetic renders. Run a few
+    hundred real ones and check `score`/`contrast`/`nx` vs `ny` in the saved metadata before trusting
+    this to throw anything away.
     """
     if det["n"] <= 0 or det["score"] < min_score:
         return False
