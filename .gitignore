@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+out/
+cand_out/
+react_out/
+cj_out/
+# example build transients (ROM + assets are kept; these regenerate)
+example_cosmicjazz/*.log
+example_cosmicjazz/*.sym
+example_cosmicjazz/*.symfull
+example_cosmicjazz/.gitignore
