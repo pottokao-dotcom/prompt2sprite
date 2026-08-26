@@ -242,6 +242,9 @@ def main():
     ap.add_argument("--keep-n", action="store_true",
                     help="trust the DETECTED cell count over --draw (see what Klein actually drew)")
     ap.add_argument("--workers", type=int, default=1)
+    ap.add_argument("--shared-palette", action="store_true",
+                    help="batch only: force every asset onto ONE master palette (one CGRAM bank). "
+                         "This -- not --theme -- is what actually fixes the colours.")
     ap.add_argument("--dry-run", action="store_true", help="print prompt + node resolution, no server")
     a = ap.parse_args()
 
@@ -283,22 +286,46 @@ def main():
             tgt, logical, meta = sprite(subj, a.size, wf, nodes, a.draw, a.tries, a.style,
                                         a.theme, a.chibi, a.method, a.colors, a.keep_n)
             if tgt is None:
-                return subj, "FAILED"
+                return subj, None, None, "FAILED"
             s = slug(subj)
-            tgt.save(f"{OUT}/{s}_{a.size}_raw.png")
             logical.save(f"{OUT}/{s}_{a.draw}_logical.png")
-            if M:
-                M.preview(tgt, f"{OUT}/{s}_{a.size}.png", max(1, 256 // a.size))
-            d = meta["detected"]
             json.dump({k: v for k, v in meta.items() if k != "render"},
                       open(f"{OUT}/{s}_{a.size}.json", "w"), indent=1, default=str)
-            return subj, f"n={d['n']} score={d['score']:.2f} grid={'ok' if meta['gridded'] else 'WEAK'}"
+            d = meta["detected"]
+            return (subj, tgt, logical,
+                    f"n={d['n']} score={d['score']:.2f} grid={'ok' if meta['gridded'] else 'WEAK'}")
         except Exception as e:
-            return subj, f"ERROR {type(e).__name__}: {e}"
+            return subj, None, None, f"ERROR {type(e).__name__}: {e}"
 
+    done = []
     with ThreadPoolExecutor(max_workers=a.workers) as ex:
-        for subj, msg in ex.map(one, subjects):
+        for subj, tgt, logical, msg in ex.map(one, subjects):
             print(f"{subj[:44]:<46} {msg}", flush=True)
+            if tgt is not None:
+                done.append((subj, tgt, logical))
+
+    if a.shared_palette and len(done) > 1:
+        # One master palette for the whole set = one CGRAM bank = a coherent game, not a pile of
+        # unrelated icons. --theme alone does NOT do this: it is a prompt phrase, so it narrows the
+        # gamut but every asset still ends up with its own 15 colours. What the theme buys is that
+        # the assets already live in one gamut, which is why forcing them onto a single bank costs
+        # almost nothing (METHODOLOGY: shared-master delta 0.008, under the 0.02 JND, against a
+        # free-colour spread of 0.272). Theme narrows; this pins.
+        ds = quant.DOWNSAMPLE[quant.METHODS[a.method][0]]
+        smalls = [ds(lg, a.size) for _, _, lg in done]
+        master = quant.shared_palette(smalls, a.colors)
+        print(f"\nshared master palette ({len(master)} colours, BGR555) over {len(done)} assets")
+        outs = [(subj, quant.remap_to(sm, master)) for (subj, _, _), sm in zip(done, smalls)]
+        json.dump([[int(c) for c in col] for col in master],
+                  open(f"{OUT}/master_palette.json", "w"), indent=1)
+    else:
+        outs = [(subj, tgt) for subj, tgt, _ in done]
+
+    for subj, img in outs:
+        s = slug(subj)
+        img.save(f"{OUT}/{s}_{a.size}_raw.png")
+        if M:
+            M.preview(img, f"{OUT}/{s}_{a.size}.png", max(1, 256 // a.size))
 
 
 if __name__ == "__main__":
