@@ -1,13 +1,18 @@
 # prompt2sprite
 
-**One prompt → a whole game's worth of recognisable pixel-art sprites.** Not a single icon — a *coherent
-set* (pieces, characters, mascots) sharing one hardware-legal palette, ready to drop into a retro-console
-game.
+**A prompt → a sprite; one shared *theme* → a coherent whole-game set.** Each asset is one short subject
+prompt; a single palette theme makes the whole set cohere (same gamut, one hardware-legal bank) — so you
+get a consistent set of pieces / characters / mascots to drop into a retro-console game, not a lone icon.
 
 It works by having an LLM draw in the representation it is actually *native* at (**SVG code, not raw
 pixel grids**), then doing the hardware-bound colour maths in Python (perceptual downscale → BGR555 →
-shared palette → CHR). A palette **theme** is what makes the whole set cohere from a single prompt — the
-same gamut across every asset, snapped to one legal bank.
+shared palette → CHR).
+
+> **The workflow it's good at.** Prototype fast, hand-polish later. Get a coherent sprite set (and, with
+> the [game agent](https://github.com/pottokao-dotcom/snes-lora-agent-qwen3.8-27b), a playable scaffold)
+> in minutes; then hand-craft the animation / juice / effects at your own pace — exactly the split the
+> `example_cosmicjazz/` showcase demonstrates (sprites generated, game-feel C hand-written). For an
+> engineer, that's a running retro game to iterate on instead of a blank `main.c`.
 
 The point of this repo is **the methodology and its evidence**, not the code: every step was chosen by
 an experiment against alternatives, scored only on recognisability. See **[`METHODOLOGY.md`](METHODOLOGY.md)** —
