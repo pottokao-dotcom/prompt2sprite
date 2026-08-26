@@ -29,6 +29,7 @@ prints which nodes it resolved, so a wrong guess is visible rather than silent.
 import argparse, copy, io, json, os, random, sys, time, urllib.parse, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
+import numpy as np
 from PIL import Image
 
 import pixelgrid
@@ -72,9 +73,22 @@ CHIBI = ("a chibi / super-deformed {subject}, big head about half the body heigh
          "expressive eyes, exaggerated signature features, cute mascot")
 
 
-def build_prompt(subject, n, style="flat", theme="none", chibi=False):
+def hex_list(pal):
+    return ", ".join("#%02X%02X%02X" % tuple(int(v) for v in c) for c in pal)
+
+
+def build_prompt(subject, n, style="flat", theme="none", chibi=False, palette=None):
     """-> (positive, negative). `theme` accepts anything make_sprite.resolve_theme does (name/number/
-    free text), so a whole-game palette is one shared flag across BOTH front-ends."""
+    free text), so a whole-game palette is one shared flag across BOTH front-ends.
+
+    `palette` (a list of RGB triples) additionally names the exact colours in the prompt. Expect that
+    to be a WEAK hint here and do not rely on it: a text encoder splits "#FF6BAA" into tokens with
+    essentially no grounding in RGB, whereas "bubblegum pink" is grounded all over image-text data,
+    and a diffusion model has no discrete colour-choice step to constrain in the first place. It is
+    worth including because it costs nothing and the same list is a HARD constraint downstream via
+    quant.remap_to -- and because the identical argument runs the other way for the SVG front-end,
+    where the model literally writes fill="#FF6BAA" and can copy the list verbatim.
+    """
     subj = subject
     if chibi:                                   # drop the subject's own article: "...deformed a rabbit"
         bare = subj.lstrip()
@@ -83,8 +97,11 @@ def build_prompt(subject, n, style="flat", theme="none", chibi=False):
                 bare = bare[len(art):]; break
         subj = CHIBI.format(subject=bare)
     tw = M.resolve_theme(theme) if M else ("" if theme in ("", "none", "0") else theme)
+    t = (", colour palette: " + tw) if tw else ""
+    if palette is not None and len(palette):
+        t += f", use only these exact colours: {hex_list(palette)}"
     return (BASE.format(n=n, subject=subj, style=STYLE.get(style, STYLE["flat"]), key=KEY_BG,
-                        theme=(", colour palette: " + tw) if tw else ""),
+                        theme=t),
             NEG)
 
 
@@ -173,7 +190,7 @@ def submit_and_fetch(wf, timeout=600, poll=1.5):
 
 # ---------- the front-end contract ----------
 def render(subject, n, wf, nodes, style="flat", theme="none", chibi=False, seed=None, px=1024,
-           trust_detect=False):
+           trust_detect=False, palette=None):
     """Generate one sprite. -> (logical RGBA, meta dict). Mirrors make_sprite.svg_raster.
 
     By default the grid is resampled at the n we ASKED for, using only the detected phase. Detection
@@ -185,7 +202,7 @@ def render(subject, n, wf, nodes, style="flat", theme="none", chibi=False, seed=
     `trust_detect=True` inverts that and is the honest setting for the experiment in
     compare_native.py, where what Klein actually drew is the question rather than a nuisance.
     """
-    pos, neg = build_prompt(subject, n, style, theme, chibi)
+    pos, neg = build_prompt(subject, n, style, theme, chibi, palette)
     seed = random.randrange(2**31) if seed is None else seed
     big = submit_and_fetch(patch_workflow(wf, nodes, positive=pos, negative=neg,
                                           seed=seed, width=px, height=px))
@@ -196,7 +213,7 @@ def render(subject, n, wf, nodes, style="flat", theme="none", chibi=False, seed=
 
 
 def sprite(subject, size, wf, nodes, draw=64, tries=3, style="flat", theme="none", chibi=False,
-           method=quant.DEFAULT, colors=15, keep_n=False):
+           method=quant.DEFAULT, colors=15, keep_n=False, palette=None):
     """Full chain: Klein -> recovered logical grid -> quant.to_target at `size`.
 
     Best-of-N on the SAME gate the SVG front-end uses (non-degenerate), plus the grid gate — a render
@@ -205,7 +222,8 @@ def sprite(subject, size, wf, nodes, draw=64, tries=3, style="flat", theme="none
     """
     best = None
     for _ in range(max(1, tries)):
-        logical, meta = render(subject, draw, wf, nodes, style, theme, chibi, trust_detect=keep_n)
+        logical, meta = render(subject, draw, wf, nodes, style, theme, chibi,
+                               trust_detect=keep_n, palette=palette)
         ok_content = M.nondegenerate(logical, logical.width) if M else True
         if meta["gridded"] and ok_content:
             best = (logical, meta); break
@@ -213,7 +231,12 @@ def sprite(subject, size, wf, nodes, draw=64, tries=3, style="flat", theme="none
     if best is None:
         return None, None, None
     logical, meta = best
-    tgt, pal = quant.to_target(logical, size, method, colors)
+    if palette is not None and len(palette):
+        # A fixed bank is a hard constraint, unlike the prompt hint: downsample, then remap.
+        small = quant.DOWNSAMPLE[quant.METHODS[method][0]](logical, size)
+        tgt, pal = quant.remap_to(small, np.array(palette, np.uint8)), palette
+    else:
+        tgt, pal = quant.to_target(logical, size, method, colors)
     meta["palette"] = pal
     return tgt, logical, meta
 
@@ -242,19 +265,23 @@ def main():
     ap.add_argument("--keep-n", action="store_true",
                     help="trust the DETECTED cell count over --draw (see what Klein actually drew)")
     ap.add_argument("--workers", type=int, default=1)
+    ap.add_argument("--palette", help="JSON list of [r,g,b] (e.g. a previous run's "
+                    "out/master_palette.json). Names the colours in the prompt AND pins the output "
+                    "to them, so a later batch is colour-identical to an earlier one.")
     ap.add_argument("--shared-palette", action="store_true",
                     help="batch only: force every asset onto ONE master palette (one CGRAM bank). "
                          "This -- not --theme -- is what actually fixes the colours.")
     ap.add_argument("--dry-run", action="store_true", help="print prompt + node resolution, no server")
     a = ap.parse_args()
 
+    fixed_pal = [tuple(c) for c in json.load(open(a.palette))] if a.palette else None
     subjects = ([l.strip() for l in open(a.batch) if l.strip() and not l.startswith("#")]
                 if a.batch else ([a.subject] if a.subject else []))
     if not subjects:
         ap.error("give a subject or --batch")
 
     if a.dry_run:
-        pos, neg = build_prompt(subjects[0], a.draw, a.style, a.theme, a.chibi)
+        pos, neg = build_prompt(subjects[0], a.draw, a.style, a.theme, a.chibi, fixed_pal)
         print(f"POSITIVE:\n  {pos}\n\nNEGATIVE:\n  {neg}\n")
         if a.workflow:
             wf = json.load(open(a.workflow))
@@ -284,7 +311,7 @@ def main():
     def one(subj):
         try:
             tgt, logical, meta = sprite(subj, a.size, wf, nodes, a.draw, a.tries, a.style,
-                                        a.theme, a.chibi, a.method, a.colors, a.keep_n)
+                                        a.theme, a.chibi, a.method, a.colors, a.keep_n, fixed_pal)
             if tgt is None:
                 return subj, None, None, "FAILED"
             s = slug(subj)
@@ -304,7 +331,10 @@ def main():
             if tgt is not None:
                 done.append((subj, tgt, logical))
 
-    if a.shared_palette and len(done) > 1:
+    if fixed_pal is not None:
+        print(f"\npinned to the supplied palette ({len(fixed_pal)} colours) from {a.palette}")
+        outs = [(subj, tgt) for subj, tgt, _ in done]
+    elif a.shared_palette and len(done) > 1:
         # One master palette for the whole set = one CGRAM bank = a coherent game, not a pile of
         # unrelated icons. --theme alone does NOT do this: it is a prompt phrase, so it narrows the
         # gamut but every asset still ends up with its own 15 colours. What the theme buys is that
