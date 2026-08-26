@@ -1,8 +1,13 @@
-# llm-pixel-art-snes
+# prompt2sprite
 
-**Make recognisable SNES sprites from a text prompt** — by having an LLM draw in the representation it
-is actually *native* at (**SVG code, not raw pixel grids**), then doing the hardware-bound colour maths
-in Python (perceptual downscale → BGR555 → shared palette → CHR).
+**One prompt → a whole game's worth of recognisable pixel-art sprites.** Not a single icon — a *coherent
+set* (pieces, characters, mascots) sharing one hardware-legal palette, ready to drop into a retro-console
+game.
+
+It works by having an LLM draw in the representation it is actually *native* at (**SVG code, not raw
+pixel grids**), then doing the hardware-bound colour maths in Python (perceptual downscale → BGR555 →
+shared palette → CHR). A palette **theme** is what makes the whole set cohere from a single prompt — the
+same gamut across every asset, snapped to one legal bank.
 
 The point of this repo is **the methodology and its evidence**, not the code: every step was chosen by
 an experiment against alternatives, scored only on recognisability. See **[`METHODOLOGY.md`](METHODOLOGY.md)** —
