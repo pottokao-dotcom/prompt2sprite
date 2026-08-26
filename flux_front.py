@@ -49,24 +49,33 @@ KEY_BG = "magenta (#FF00FF)"         # keyed out by pixelgrid.key_bg; see module
 # Diffusion wants a described *look*, not the drawing instructions an LLM emitting SVG needs — so these
 # are deliberately NOT make_sprite.STYLE. The shared knob is the THEME registry, which is already plain
 # descriptive colour language and ports across unchanged.
+# Flatness and a limited palette are properties of the MEDIUM, not of a style, so they live in BASE
+# and every style inherits them. They used to sit inside STYLE["flat"], which meant shade/outline/comic
+# were free to render smooth blends and hundreds of tones -- the two styles most likely to drift off
+# the grid were also the two with no flatness constraint on them at all.
 STYLE = {
-    "flat":    "flat solid colour fills, no shading, no gradients, each region a single bright "
-               "saturated colour, clean readable silhouette",
+    "flat":    "each region a single bright saturated colour, clean readable silhouette",
     "shade":   "simple two-tone shading, one darker shade on the lower-right of each region and one "
                "lighter tint on the upper-left, no outline, bright saturated colours",
-    "outline": "bright flat fills with a clean dark 1-pixel outline around the silhouette and the key "
-               "internal features, classic readable game-sprite look",
-    "comic":   "manga/anime cel-shaded look, bold black ink outlines of even weight, flat cel fills "
-               "with hard-edged shadow shapes, expressive comic styling",
+    "outline": "a clean dark 1-pixel outline around the silhouette and the key internal features, "
+               "classic readable game-sprite look",
+    "comic":   "manga/anime cel-shaded look, bold black ink outlines of even weight, hard-edged "
+               "shadow shapes, expressive comic styling",
 }
 
+# "no more than N flat colours" is the constraint worth spending prompt on: a colour COUNT and the
+# word posterised are grounded all over image-text data, unlike a hex value (see build_prompt).
 BASE = ("{n}x{n} pixel art sprite of {subject}, retro 16-bit SNES game sprite, "
         "drawn on an exact {n} by {n} pixel grid, every pixel a crisp hard-edged square, "
         "nearest-neighbour, no anti-aliasing, no blur, no gradients, no dithering, "
+        "strictly limited palette of no more than {colors} flat solid colours in total, "
+        "posterised into large unbroken blocks of one pure colour, "
+        "hard edges between colours, no intermediate tones, no colour blending, no soft shading, "
         "{style}, centred with a small margin, whole object visible, "
         "flat plain {key} background{theme}")
 
 NEG = ("photograph, 3d render, painterly, soft focus, blurry, anti-aliased edges, colour gradient, "
+       "smooth shading, colour blending, subtle tones, many colours, "
        "jpeg artifacts, drop shadow, text, watermark, signature, frame, border, multiple objects")
 
 CHIBI = ("a chibi / super-deformed {subject}, big head about half the body height, tiny body, huge "
@@ -77,7 +86,7 @@ def hex_list(pal):
     return ", ".join("#%02X%02X%02X" % tuple(int(v) for v in c) for c in pal)
 
 
-def build_prompt(subject, n, style="flat", theme="none", chibi=False, palette=None):
+def build_prompt(subject, n, style="flat", theme="none", chibi=False, palette=None, colors=15):
     """-> (positive, negative). `theme` accepts anything make_sprite.resolve_theme does (name/number/
     free text), so a whole-game palette is one shared flag across BOTH front-ends.
 
@@ -101,7 +110,7 @@ def build_prompt(subject, n, style="flat", theme="none", chibi=False, palette=No
     if palette is not None and len(palette):
         t += f", use only these exact colours: {hex_list(palette)}"
     return (BASE.format(n=n, subject=subj, style=STYLE.get(style, STYLE["flat"]), key=KEY_BG,
-                        theme=t),
+                        colors=colors, theme=t),
             NEG)
 
 
@@ -190,7 +199,7 @@ def submit_and_fetch(wf, timeout=600, poll=1.5):
 
 # ---------- the front-end contract ----------
 def render(subject, n, wf, nodes, style="flat", theme="none", chibi=False, seed=None, px=1024,
-           trust_detect=False, palette=None):
+           trust_detect=False, palette=None, colors=15):
     """Generate one sprite. -> (logical RGBA, meta dict). Mirrors make_sprite.svg_raster.
 
     By default the grid is resampled at the n we ASKED for, using only the detected phase. Detection
@@ -202,7 +211,7 @@ def render(subject, n, wf, nodes, style="flat", theme="none", chibi=False, seed=
     `trust_detect=True` inverts that and is the honest setting for the experiment in
     compare_native.py, where what Klein actually drew is the question rather than a nuisance.
     """
-    pos, neg = build_prompt(subject, n, style, theme, chibi, palette)
+    pos, neg = build_prompt(subject, n, style, theme, chibi, palette, colors)
     seed = random.randrange(2**31) if seed is None else seed
     big = submit_and_fetch(patch_workflow(wf, nodes, positive=pos, negative=neg,
                                           seed=seed, width=px, height=px))
@@ -223,7 +232,7 @@ def sprite(subject, size, wf, nodes, draw=64, tries=3, style="flat", theme="none
     best = None
     for _ in range(max(1, tries)):
         logical, meta = render(subject, draw, wf, nodes, style, theme, chibi,
-                               trust_detect=keep_n, palette=palette)
+                               trust_detect=keep_n, palette=palette, colors=colors)
         ok_content = M.nondegenerate(logical, logical.width) if M else True
         if meta["gridded"] and ok_content:
             best = (logical, meta); break
@@ -281,7 +290,7 @@ def main():
         ap.error("give a subject or --batch")
 
     if a.dry_run:
-        pos, neg = build_prompt(subjects[0], a.draw, a.style, a.theme, a.chibi, fixed_pal)
+        pos, neg = build_prompt(subjects[0], a.draw, a.style, a.theme, a.chibi, fixed_pal, a.colors)
         print(f"POSITIVE:\n  {pos}\n\nNEGATIVE:\n  {neg}\n")
         if a.workflow:
             wf = json.load(open(a.workflow))
