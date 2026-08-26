@@ -73,7 +73,10 @@ def main():
     ap.add_argument("--workflow", required=True, help="ComfyUI API-format workflow JSON")
     ap.add_argument("--node", action="append", default=[])
     ap.add_argument("--tries", type=int, default=2)
-    ap.add_argument("--style", default="flat", choices=list(F.STYLE))
+    ap.add_argument("--styles", default="flat",
+                    help="comma list, e.g. flat,comic. Adds a style axis: does asking for a look "
+                         "that fights the grid (manga cel-shading wants smooth even-weight ink; a "
+                         "64px grid can only give staircases) cost grid fidelity?")
     ap.add_argument("--theme", default="none")
     ap.add_argument("--chibi", action="store_true")
     ap.add_argument("--px", type=int, default=1024)
@@ -85,62 +88,82 @@ def main():
     if "positive" not in nodes:
         ap.error("could not resolve the 'positive' node; pass --node positive=<node_id>")
 
+    styles = [s.strip() for s in a.styles.split(",") if s.strip()]
+    for s in styles:
+        if s not in F.STYLE:
+            ap.error(f"unknown style {s!r}; choose from {list(F.STYLE)}")
+
     rows, results = [], []
     for subj in SUBJECTS:
-        row = []
-        for n in ROUTES:
-            print(f"  {subj[:30]:<32} ask n={n}", flush=True)
-            best = None
-            for _ in range(max(1, a.tries)):
-                # trust_detect=True: what Klein ACTUALLY drew is the measurement, not a nuisance
-                logical, meta = F.render(subj, n, wf, nodes, a.style, a.theme, a.chibi,
-                                         px=a.px, trust_detect=True)
-                if best is None or (meta["matched"] and not best[1]["matched"]):
-                    best = (logical, meta)
-                if meta["matched"] and meta["gridded"]:
-                    break
-            logical, meta = best
-            det = meta["detected"]
+        for style in styles:
+            row = []
+            for n in ROUTES:
+                print(f"  {subj[:28]:<30} {style:<8} ask n={n}", flush=True)
+                best = None
+                for _ in range(max(1, a.tries)):
+                    # trust_detect=True: what Klein ACTUALLY drew is the measurement, not a nuisance
+                    logical, meta = F.render(subj, n, wf, nodes, style, a.theme, a.chibi,
+                                             px=a.px, trust_detect=True)
+                    if best is None or (meta["matched"] and not best[1]["matched"]):
+                        best = (logical, meta)
+                    if meta["matched"] and meta["gridded"]:
+                        break
+                logical, meta = best
+                det = meta["detected"]
 
-            # Every route lands on the same 16x16 target, so the comparison is like-for-like.
-            tgt, pal = quant.to_target(logical, TARGET, colors=a.colors)
-            sc = judge.score(tgt, subj) if judge else None
+                # Every route lands on the same 16x16 target, so the comparison is like-for-like.
+                tgt, pal = quant.to_target(logical, TARGET, colors=a.colors)
+                sc = judge.score(tgt, subj) if judge else None
 
-            rec = {"subject": subj, "asked_n": n, "detected_n": det["n"], "matched": meta["matched"],
-                   "grid_score": round(det["score"], 3), "contrast": round(det["contrast"], 2),
-                   "gridded": meta["gridded"], "palette": len(pal), "seed": meta["seed"],
-                   "recognisability": (sc[0] if sc else None), "seen": (sc[1] if sc else "")}
-            results.append(rec)
-            row.append(cell(tgt, f"ask {n} -> {TARGET}",
-                            f"drew n={det['n']} {'OK' if meta['matched'] else 'MISMATCH'}",
-                            f"score {rec['recognisability']}" if sc else f"grid {det['score']:.2f}"))
-        rows.append((subj, row))
+                rec = {"subject": subj, "style": style, "asked_n": n, "detected_n": det["n"],
+                       "matched": meta["matched"], "grid_score": round(det["score"], 3),
+                       "contrast": round(det["contrast"], 2), "gridded": meta["gridded"],
+                       "palette": len(pal), "seed": meta["seed"],
+                       "recognisability": (sc[0] if sc else None), "seen": (sc[1] if sc else "")}
+                results.append(rec)
+                row.append(cell(tgt, f"ask {n} -> {TARGET}",
+                                f"drew n={det['n']} {'OK' if meta['matched'] else 'MISMATCH'}",
+                                f"score {rec['recognisability']}" if sc else f"grid {det['score']:.2f}"))
+            rows.append((f"{subj}  [{style}]", row))
 
-    W = 150 + len(ROUTES) * (CELL + 6); H = 22 + len(SUBJECTS) * (CELL + 6)
+    W = 230 + len(ROUTES) * (CELL + 6); H = 22 + len(rows) * (CELL + 6)
     mont = Image.new("RGBA", (W, H), (18, 18, 26, 255)); D = ImageDraw.Draw(mont)
     D.text((6, 6), f"Klein 9B native-resolution shoot-out -> {TARGET}x{TARGET}  "
-                   f"(style={a.style} theme={a.theme})", fill=(220, 230, 255, 255))
-    for r, (subj, row) in enumerate(rows):
+                   f"(styles={','.join(styles)} theme={a.theme}{' chibi' if a.chibi else ''})",
+           fill=(220, 230, 255, 255))
+    for r, (label, row) in enumerate(rows):
         y = 22 + r * (CELL + 6)
-        D.text((6, y + CELL // 2), subj[:20], fill=(200, 200, 210, 255))
+        D.text((6, y + CELL // 2), label[:32], fill=(200, 200, 210, 255))
         for c, im in enumerate(row):
-            mont.alpha_composite(im, (150 + c * (CELL + 6), y))
+            mont.alpha_composite(im, (230 + c * (CELL + 6), y))
     mont.convert("RGB").save(f"{HERE}/native_montage.png")
     json.dump(results, open(f"{HERE}/native_scores.json", "w"), indent=1)
 
     print("\n-- grid fidelity: does Klein lay down the cell count it was told? --")
-    for n in ROUTES:
-        sub = [r for r in results if r["asked_n"] == n]
-        hit = sum(r["matched"] for r in sub)
-        drew = ", ".join(str(r["detected_n"]) for r in sub)
-        print(f"  asked {n:>3}: matched {hit}/{len(sub)}   drew [{drew}]")
+    print(f"  {'':<10}" + "".join(f"ask {n:<10}" for n in ROUTES))
+    for style in styles:
+        line = f"  {style:<10}"
+        for n in ROUTES:
+            sub = [r for r in results if r["asked_n"] == n and r["style"] == style]
+            line += f"{sum(r['matched'] for r in sub)}/{len(sub):<12}"
+        print(line)
+    if len(styles) > 1:
+        print("\n  (a style that fights the grid should show up as a lower row here, not as a "
+              "prettier montage)")
+    for style in styles:
+        for n in ROUTES:
+            sub = [r for r in results if r["asked_n"] == n and r["style"] == style]
+            print(f"    {style:<9} asked {n:>3}: drew {[r['detected_n'] for r in sub]}")
+
     scored = [r["recognisability"] for r in results if r["recognisability"] is not None]
     if scored:
         print("\n-- recognisability (0-10) --")
-        for n in ROUTES:
-            s = [r["recognisability"] for r in results if r["asked_n"] == n and r["recognisability"] is not None]
-            if s:
-                print(f"  asked {n:>3}: avg {sum(s)/len(s):.1f}   {s}")
+        for style in styles:
+            for n in ROUTES:
+                s = [r["recognisability"] for r in results
+                     if r["asked_n"] == n and r["style"] == style and r["recognisability"] is not None]
+                if s:
+                    print(f"  {style:<9} asked {n:>3}: avg {sum(s)/len(s):.1f}   {s}")
     else:
         print("\n(no vision judge reachable -- score native_montage.png by hand, "
               "or set VISION_URL/VISION_MODEL)")
