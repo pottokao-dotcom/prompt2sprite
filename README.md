@@ -10,9 +10,15 @@ shared palette → CHR).
 
 > **The workflow it's good at.** Prototype fast, hand-polish later. Get a coherent sprite set (and, with
 > the [game agent](https://github.com/pottokao-dotcom/snes-lora-agent-qwen3.8-27b), a playable scaffold)
-> in minutes; then hand-craft the animation / juice / effects at your own pace — exactly the split the
-> `example_cosmicjazz/` showcase demonstrates (sprites generated, game-feel C hand-written). For an
-> engineer, that's a running retro game to iterate on instead of a blank `main.c`.
+> in minutes — often **already enough for an early, resource-light demo** (the gameplay GIF above is
+> exactly that) — then hand-craft the animation / juice / effects at your own pace. That's the split the
+> `example_cosmicjazz/` showcase demonstrates (sprites generated, game-feel C hand-written): for a solo
+> or early-stage dev, a running retro game to iterate on instead of a blank `main.c`.
+>
+> It also hands you a **stable, hardware-correct graphics foundation** to build on: legal CHR/palette,
+> the gfx4snes sheet-reflow tile maths, OBJ sizing and one shared 16-colour bank are already solved and
+> documented (`END_TO_END.md`) — so you're extending a working sprite pipeline, not fighting SNES
+> graphics setup from scratch.
 
 The point of this repo is **the methodology and its evidence**, not the code: every step was chosen by
 an experiment against alternatives, scored only on recognisability. See **[`METHODOLOGY.md`](METHODOLOGY.md)** —
