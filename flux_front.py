@@ -36,8 +36,9 @@ import pixelgrid
 import quant
 try:
     import make_sprite as M          # reuse the THEMES registry + slug/preview helpers
-except Exception:                    # make_sprite imports cairosvg; not needed for this front-end
+except Exception as _e:              # make_sprite imports cairosvg; not needed for this front-end
     M = None
+    _M_ERR = _e
 
 COMFY = os.getenv("COMFY_URL", "http://127.0.0.1:8188").rstrip("/")
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -105,7 +106,18 @@ def build_prompt(subject, n, style="flat", theme="none", chibi=False, palette=No
             if bare.lower().startswith(art):
                 bare = bare[len(art):]; break
         subj = CHIBI.format(subject=bare)
-    tw = M.resolve_theme(theme) if M else ("" if theme in ("", "none", "0") else theme)
+    if M:
+        tw = M.resolve_theme(theme)
+    else:
+        # Without make_sprite the THEMES registry is gone, so "candy" would go into the prompt as the
+        # bare word "candy" instead of its palette phrase -- a quietly much weaker constraint that
+        # looks like it worked. Fail loudly rather than silently degrade the run.
+        tw = "" if theme in ("", "none", "0") else theme
+        if tw and not tw.startswith(("a ", "the ")) and " " not in tw:
+            raise SystemExit(
+                f"--theme {theme!r} needs the THEMES registry in make_sprite.py, which failed to "
+                f"import ({_M_ERR}). Install its dependency (pip install cairosvg) or pass the full "
+                f"palette phrase as free text instead of a preset name.")
     t = (", colour palette: " + tw) if tw else ""
     if palette is not None and len(palette):
         t += f", use only these exact colours: {hex_list(palette)}"
