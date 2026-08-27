@@ -77,6 +77,17 @@ footer .gh{display:inline-block;margin-bottom:14px}
   </section>
 
   <section>
+    <h2>Two full sets, drawn by diffusion</h2>
+    <p class="sub">The GPU path — <b>Z-Image Turbo</b> via ComfyUI. Each theme: two mascots × 5 chibi
+    poses (32×64), six pieces, and backgrounds — quantised to one hardware-legal SNES palette.</p>
+    <img class="px shot" src="img/diffusion_gallery_jazz.png" alt="Cosmic Jazz set: jazz rabbit and rock groundhog poses, candy pieces, backgrounds" style="margin-bottom:16px">
+    <img class="px shot" src="img/diffusion_gallery_space.png" alt="Deep Space set: astronaut rabbit and alien groundhog poses, planet pieces, backgrounds">
+    <p class="sub" style="margin-top:22px">Diffusion renders big, then the shared back-end downscales &amp;
+    quantises to a real SNES sprite — the pixels aren't a happy accident:</p>
+    <img class="shot" src="img/diffusion_raw_to_snes.png" alt="Z-Image Turbo raster downscaled and quantised into a SNES sprite">
+  </section>
+
+  <section>
     <h2>It runs on real hardware</h2>
     <div class="two">
       <img class="px shot" src="img/cosmicjazz_gameplay.gif" alt="COSMIC JAZZ match-3 gameplay on an emulated SNES">

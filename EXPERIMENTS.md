@@ -35,6 +35,15 @@ signature prop only, no scene); pieces at **both 32² and 16²** (16² so a matc
 ![chibi 32×64 mascots](evidence/exp3_chibi_mascots.png)
 ![16×16 pieces](evidence/exp3_pieces16.png)
 
+The full sets as posters — mascots, pieces and backgrounds, all quantised to one SNES palette:
+
+![Cosmic Jazz set](evidence/diffusion_gallery_jazz.png)
+![Deep Space set](evidence/diffusion_gallery_space.png)
+
+Diffusion renders big; the shared back-end downscales + quantises it into a real SNES sprite:
+
+![raster → SNES sprite](evidence/diffusion_raw_to_snes.png)
+
 Each mascot has 5 poses, each theme 6 pieces × 2 sizes + 2 backgrounds, every asset at ×8 and ×16.
 Report: `reports/sets_x8_vs_x16.html` · data: `zimage_sets2/`.
 
