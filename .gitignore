@@ -9,3 +9,4 @@ example_cosmicjazz/*.log
 example_cosmicjazz/*.sym
 example_cosmicjazz/*.symfull
 example_cosmicjazz/.gitignore
+set_*/

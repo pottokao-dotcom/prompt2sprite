@@ -55,11 +55,18 @@ Full reasoning, the falsifying result for each, and the honest limits: **[`METHO
 
 ## Quickstart
 
-```sh
-# needs an OpenAI-compatible LLM that can emit SVG (default http://localhost:8001, model "qwen38")
-export SFC_LLM_URL=http://localhost:8001
-pip install pillow cairosvg numpy
+**New here? One concept → a whole set** — the beginner entry point is [`examples/`](examples/), with a
+pure-Python (no-GPU) and a diffusion (GPU) version:
 
+```sh
+export SFC_LLM_URL=http://localhost:8001        # any OpenAI-compatible LLM that can emit SVG
+python3 examples/make_set_svg.py "a candy match-3 game"   # → set_.../preview.png (pieces + hero, one palette)
+```
+
+Or draw a single sprite with the underlying tool:
+
+```sh
+pip install pillow cairosvg numpy
 python3 make_sprite.py "a shiny gold coin"          --size 16                 # icon
 python3 make_sprite.py "a fireball"                 --size 16 --style shade   # organic FX
 python3 make_sprite.py "a jazz rabbit with a sax"   --size 32                 # character
