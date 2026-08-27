@@ -60,8 +60,10 @@ generate* — 512 for quality, 128 for throughput. (SVG's equivalent is ×4 into
 
 ## 3. ComfyUI workflow — the basic setup
 
-Any **Z-Image Turbo** text-to-image workflow works; you patch four things per job via the HTTP API. The
-node ids below are from the workflow this used (`zimage_base2_turbo8_gx10_nvfp4all.json`); match yours.
+Any **standard Z-Image Turbo** text-to-image workflow works — you don't need a special one. The file this
+repo happened to use (`zimage_base2_turbo8_gx10_nvfp4all.json`) is just a personal/custom setup; a stock
+Z-Image Turbo workflow is fine. You patch four things per job via the HTTP API; the node ids below are
+from that file — **match them to yours** (override `COMFY_NODE_*` in the examples if they differ).
 
 | node | class | what to set |
 |---|---|---|

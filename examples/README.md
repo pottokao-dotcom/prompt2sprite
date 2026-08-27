@@ -37,6 +37,12 @@ python3 make_set_diffusion.py "a candy match-3 game" --mult 8
 The prompt goes into the workflow's `user_prompt` field; the latent size is set to `mult × target`
 (×8 is a good default, ×16 for max quality — see [`../DIFFUSION_VS_SVG.md`](../DIFFUSION_VS_SVG.md)).
 
+> **Any Z-Image Turbo workflow works.** The one used to build this repo
+> (`zimage_base2_turbo8_gx10_nvfp4all.json`) is just a personal/custom setup — a **standard Z-Image Turbo
+> text-to-image workflow** is fine. Only two things must line up: your prompt node uses **`user_prompt`**
+> (Z-Image's Lumina2 encoder), and the node ids match (override `COMFY_NODE_*` if they differ from the
+> `84:66 / 79 / 81,81b` defaults).
+
 ## What you get
 
 Either script writes a folder `set_<concept>/`:
