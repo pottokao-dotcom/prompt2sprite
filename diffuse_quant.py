@@ -47,6 +47,41 @@ def crop_square(img, margin=0.06):
     sq.alpha_composite(sub, ((s-sub.width)//2, (s-sub.height)//2))
     return sq
 
+def crop_fit(img, tw, th, margin=0.03):
+    """crop to the sprite, then pad to the target aspect (tw:th) so nothing is squashed."""
+    a = np.array(img); ys, xs = np.where(a[..., 3] >= quant.A_OPAQUE)
+    if len(xs) == 0: return img.resize((tw, th))
+    sub = img.crop((xs.min(), ys.min(), xs.max()+1, ys.max()+1))
+    m = 1 + 2*margin
+    cw, ch = sub.width*m, sub.height*m
+    if cw/ch < tw/th: cw = ch*tw/th          # letterbox to the target aspect
+    else: ch = cw*th/tw
+    box = Image.new("RGBA", (int(cw), int(ch)), (0, 0, 0, 0))
+    box.alpha_composite(sub, ((box.width-sub.width)//2, (box.height-sub.height)//2))
+    return box
+
+def ds_modal_rect(src, tw, th):
+    a = np.array(src.convert("RGBA")); H, W = a.shape[:2]; sx = max(1, W//tw); sy = max(1, H//th)
+    out = np.zeros((th, tw, 4), np.uint8)
+    for y in range(th):
+        for x in range(tw):
+            blk = a[y*sy:(y+1)*sy, x*sx:(x+1)*sx].reshape(-1, 4); op = blk[blk[:, 3] >= quant.A_OPAQUE]
+            if len(op) < sy*sx*0.34: continue
+            cols, cnt = np.unique(op[:, :3], axis=0, return_counts=True); out[y, x, :3] = cols[cnt.argmax()]; out[y, x, 3] = 255
+    return Image.fromarray(out, "RGBA")
+
+def process_rect(path, tw, th, kind="spr", colors=15):
+    """general W×H processor: bg = full frame; sprite = strip → crop-to-aspect → modal → quantise."""
+    r = Image.open(path).convert("RGBA")
+    if kind == "bg":
+        a = np.array(r); a[..., 3] = 255; small = ds_modal_rect(Image.fromarray(a, "RGBA"), tw, th)
+    else:
+        small = ds_modal_rect(crop_fit(strip_bg(r, 40), tw, th), tw, th)
+    a = np.array(small); m = a[..., 3] >= quant.A_OPAQUE; px = a[..., :3][m]
+    if not len(px): return small
+    pal = quant.snap555(quant.cr_oklab(px, colors))
+    return quant.remap_to(small, pal)
+
 def preview(img, out, scale):
     big = img.resize((img.width*scale, img.height*scale), Image.NEAREST)
     bg = Image.new("RGBA", big.size, (0, 0, 0, 0)); bp = bg.load()
@@ -55,10 +90,13 @@ def preview(img, out, scale):
             bp[x, y] = (60, 60, 70, 255) if ((x//scale + y//scale) % 2 == 0) else (44, 44, 54, 255)
     Image.alpha_composite(bg, big).save(out)
 
-def run(path, size, method, palette, bg_thresh, do_crop):
+def run(path, size, method, palette, bg_thresh, do_crop, bg_tile=False):
     raster = Image.open(path).convert("RGBA")
-    sprite = strip_bg(raster, bg_thresh)
-    if do_crop: sprite = crop_square(sprite)
+    if bg_tile:                                            # background tile: keep the whole frame, opaque
+        a = np.array(raster); a[..., 3] = 255; sprite = Image.fromarray(a, "RGBA")
+    else:
+        sprite = strip_bg(raster, bg_thresh)
+        if do_crop: sprite = crop_square(sprite)
     if palette is not None:
         small = quant.DOWNSAMPLE[quant.METHODS[method][0]](sprite, size)   # downsample only
         tgt = quant.remap_to(small, palette); used = palette
@@ -81,6 +119,7 @@ if __name__ == "__main__":
     ap.add_argument("--palette", help="hex file or indexed PNG -> HARD palette lock")
     ap.add_argument("--bg-thresh", dest="bg_thresh", type=int, default=40, help="flood-fill bg tolerance")
     ap.add_argument("--no-crop", dest="crop", action="store_false")
+    ap.add_argument("--bg", dest="bg_tile", action="store_true", help="background tile: keep whole frame, no strip/crop")
     a = ap.parse_args()
     pal = load_palette(a.palette) if a.palette else None
-    run(a.raster, a.size, a.method, pal, a.bg_thresh, a.crop)
+    run(a.raster, a.size, a.method, pal, a.bg_thresh, a.crop, a.bg_tile)

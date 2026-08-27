@@ -85,7 +85,8 @@ Both obey the same two rules: **generate at ×4 the target** (never the native t
 and **lock the palette in post** (a deterministic remap to a fixed bank, not a model feature). Full guide
 — ComfyUI setup, the prompt templates, and especially the **palette/theme** coherence control — in
 [`DIFFUSION_VS_SVG.md`](DIFFUSION_VS_SVG.md); the measured comparison is the
-[report](reports/diffusion_vs_svg.html).
+[report](reports/diffusion_vs_svg.html). **Three worked example sets** (diffusion vs SVG, and two full themed
+asset sets at ×8/×16) with graphics: **[`EXPERIMENTS.md`](EXPERIMENTS.md)**.
 
 ```sh
 # diffusion path, quick form:
