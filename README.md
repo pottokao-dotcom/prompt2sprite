@@ -71,6 +71,29 @@ Output: `out/<slug>_<size>.png` (target sprite) + `out/<slug>_<size>_raw.png` (R
 Best-of-N with a non-degenerate probe → never ships a blank. Downstream: feed the sheet to `gfx4snes`
 (see `example_cosmicjazz/`) for the CHR bitplane.
 
+## Two front-ends (SVG or diffusion) — one shared back-end
+
+The front-end that *draws* is swappable; everything downstream (`quant.py` downscale/OKLab/BGR555/shared
+palette, `diffuse_quant.py` bg-strip/crop, the palette lock) is the same either way.
+
+| front-end | draws with | quality | needs | use when |
+|---|---|---|---|---|
+| **SVG** (default) | an LLM emits SVG (`make_sprite.py`) | good | any OpenAI LLM, **no GPU** | anywhere, zero deps |
+| **Diffusion** | Z-Image Turbo via ComfyUI (`comfyui/gen_zimage_sprites.py` → `diffuse_quant.py`) | **better**, esp. @32×32 | a GPU + ComfyUI | when you have the GPU |
+
+Both obey the same two rules: **generate at ×4 the target** (never the native tiny grid — it collapses),
+and **lock the palette in post** (a deterministic remap to a fixed bank, not a model feature). Full guide
+— ComfyUI setup, the prompt templates, and especially the **palette/theme** coherence control — in
+[`DIFFUSION_VS_SVG.md`](DIFFUSION_VS_SVG.md); the measured comparison is the
+[report](reports/diffusion_vs_svg.html).
+
+```sh
+# diffusion path, quick form:
+python3 comfyui/gen_zimage_sprites.py            # ComfyUI @ your GPU host -> rasters
+python3 diffuse_quant.py zimage_raw/coin.png --size 32                         # free palette
+python3 diffuse_quant.py zimage_raw/mint.png --size 32 --palette palettes/candy.hex   # hard lock
+```
+
 ## What's inside
 
 ```
