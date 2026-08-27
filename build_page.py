@@ -56,7 +56,7 @@ def ladder_grid():
         cells = ""
         for g in GENS:
             p = f"{HERE}/zimage_ladder/{s}_{g}.png"
-            cls = " sweet" if g == 128 else (" dead" if g == 32 else "")
+            cls = " sweet" if g == 512 else (" speed" if g == 128 else (" dead" if g == 32 else ""))
             img = f'<img class="px" style="width:92px" src="{d_png(process(p,32))}">' if os.path.exists(p) else ""
             cells += f'<td class="lad{cls}">{img}</td>'
         rows += f'<tr><th class="rside">{s}</th>{cells}</tr>'
@@ -123,7 +123,10 @@ table.ladder th .mx{display:block;color:var(--gold);font-size:11px;letter-spacin
 table.ladder th.rside{color:var(--ink);text-align:right;padding-right:8px;font-size:13px}
 td.lad{background:#0d0a12;border:1px solid var(--line);border-radius:8px;padding:6px;text-align:center;vertical-align:middle}
 td.lad.sweet{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+td.lad.speed{border-color:var(--pink)}
 td.lad.dead{border-color:#4a2733}
+td.lad.sweet::after{content:"quality";display:block;font-family:var(--mono);font-size:10px;color:var(--gold);margin-top:3px}
+td.lad.speed::after{content:"speed";display:block;font-family:var(--mono);font-size:10px;color:var(--pink);margin-top:3px}
 .time{font-family:var(--mono);font-size:12.5px;color:var(--dim);margin:12px 0 0}.time b{color:var(--ink)}
 .foot{margin-top:52px;padding-top:20px;border-top:1px solid var(--line);color:var(--dim);font-size:14px;font-family:var(--mono)}
 a{color:var(--gold)}
@@ -153,15 +156,17 @@ a{color:var(--gold)}
   <div class="strip">{{SWEEP}}</div>
 
   <h2>How big to generate <small>— the efficiency sweet spot</small></h2>
-  <p class="note">Same subject <b>generated</b> at each canvas, then downscaled to 32. This is the whole
-  "×N multiple" question: <b>native ×1 (generate at 32) collapses</b> — diffusion can't form a sprite that
-  small. <b>×2 (64px) already works</b>; <b>×4 (128px) is the crispest</b> and, since gen time floors out
-  below 128px, also the cheapest good option. ×8 / ×16 cost more time for no gain.</p>
+  <p class="note">Same subject <b>generated</b> at each canvas, then downscaled to 32. The whole "×N
+  multiple" question: <b>native ×1 (generate at 32) collapses</b> — diffusion can't form a sprite that
+  small. <b>×2 (64px) already works</b>, and from <b>×4 (128px) up it's all good</b>. More source pixels =
+  slightly crisper edges, so <b>512 is the quality pick</b>; ×4 is the throughput pick (~3.5× faster). The
+  choice is only <em>how far above the target</em> to generate.</p>
   {{LADDER}}
-  <div class="finding" style="border-left-color:var(--pink)"><div>◆</div><div><b>Rule of thumb.</b>
-  Generate at <b>×4 the target</b> (128px for a 32-sprite, 64px for a 16-sprite), not 512 — same quality,
-  ~3.5× faster. Native ×1 is a dead end. And note: the downscale step is also where transparency
-  (background strip) and the BGR555 snap happen, so <code>diffuse_quant</code> runs on every path anyway.</div></div>
+  <div class="finding" style="border-left-color:var(--pink)"><div>◆</div><div><b>Two defaults, by priority.</b>
+  <b>Quality-first → 512 → 32</b>: the most source detail before the shrink = the crispest edge, and at
+  ~2s/sprite it's trivial for a game's asset set. <b>Scale/speed → ×4 (128)</b>: ~3.5× faster for a barely
+  perceptible loss — worth it only when batching many. Native ×1 collapses. Either way the shrink also does
+  transparency (bg-strip) and the BGR555 snap, so <code>diffuse_quant</code> runs on every path.</div></div>
 
   <h2>Palette lock <small>— H2: can we force a fixed bank?</small></h2>
   <p class="note">Not in the model — as a deterministic post-step. Each candy at 32, free colours vs. hard

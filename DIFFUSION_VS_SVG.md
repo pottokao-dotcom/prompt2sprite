@@ -49,9 +49,14 @@ Measured on Z-Image Turbo (nvfp4, GB10), generating the same coin then downscali
 | 256px | ×8 | good, softer | 0.91s |
 | 512px | ×16 | good, no gain | 2.12s |
 
-**Rule of thumb: generate at ×4 the target** (128px for a 32-sprite, 64px for a 16-sprite). Same quality
-as 512, ~3.5× faster; below 128px fixed overhead dominates so going smaller barely saves. Native ×1 is a
-dead end. (SVG's equivalent is ×4 into a ~64px cap.)
+**Two sensible defaults, by priority:**
+- **Quality-first → 512 → 32.** The most source detail before the shrink → the crispest silhouette/outline.
+  At ~2s/sprite this is nothing for a game's asset set (dozens of sprites), so it's a fine everyday default.
+- **Scale/speed → ×4 (128 → 32).** Only worth it when batching *many* sprites: ~3.5× faster for a barely
+  perceptible loss of edge crispness. Below 128px fixed overhead dominates, so going smaller barely saves.
+
+**Native ×1 is a dead end** (it collapses). So the real choice is just *how far above the target to
+generate* — 512 for quality, 128 for throughput. (SVG's equivalent is ×4 into a ~64px cap.)
 
 ## 3. ComfyUI workflow — the basic setup
 
