@@ -102,20 +102,50 @@ python3 diffuse_quant.py zimage_raw/coin.png --size 32                         #
 python3 diffuse_quant.py zimage_raw/mint.png --size 32 --palette palettes/candy.hex   # hard lock
 ```
 
-## What's inside
+## Repository map — where to start
 
+| I want to… | go to |
+|---|---|
+| **just make sprites** | [`examples/`](examples/) — one concept → a whole set |
+| **know *why* it works** | [`METHODOLOGY.md`](METHODOLOGY.md) — every decision, its experiment, its falsifier |
+| **use the diffusion path / control the palette** | [`DIFFUSION_VS_SVG.md`](DIFFUSION_VS_SVG.md) |
+| **just look** | the [showcase site](https://pottokao-dotcom.github.io/prompt2sprite/) · `reports/` |
+
+**Start here — examples (they call the tools for you)**
 ```
-METHODOLOGY.md              ← the point: why each decision, the experiment, the numbers, the falsifier
-make_sprite.py              the tool (SVG draw → quantise → BGR555)
-quant.py                    pluggable quantiser registry (downsampler × reducer), OKLab, shared palette
-judge.py                    optional vision-judge gate (recognisability best-of-N)
-compare_{style,quant,theme,constraint}.py   the benches that (re)generate the evidence montages
-PIXEL_CAPABILITY_REPORT.md  the benchmark scores
+examples/make_set_svg.py         one concept → a whole coherent set — pure Python, NO GPU
+examples/make_set_diffusion.py   same, drawn by Z-Image Turbo (ComfyUI) — needs a GPU
+examples/README.md               which path needs what (stated up front)
+```
+
+**Tools — the building blocks (repo root)**
+```
+make_sprite.py    one subject → one SVG sprite (draw → quantise → BGR555)
+quant.py          pluggable quantiser registry (downsampler × reducer) · OKLab · shared palette
+diffuse_quant.py  raster back-end: bg-strip · crop · downscale (square / non-square / bg-tile) · palette lock
+judge.py          optional vision-judge gate (recognisability best-of-N)
+compare_*.py      benches that regenerate the evidence montages
+comfyui/          the ComfyUI API driver used to generate the diffusion sets
+```
+
+**Docs — the why & how**
+```
+METHODOLOGY.md              why each SVG decision — experiment, numbers, falsifier (the centre of gravity)
+DIFFUSION_VS_SVG.md         diffusion front-end: ComfyUI setup, prompt templates, palette/theme, verdict
 PIXEL_TOOLS_DESIGN.md       frozen architecture + reasoning
-evidence/                   every montage + on-hardware screenshots + the gameplay GIF/MP4
+PIXEL_CAPABILITY_REPORT.md  the benchmark scores
+EXPERIMENTS.md              three worked sets, with graphics
+END_TO_END.md · TUTORIAL_sound_effects.md   the showcase game: text→sprite→CHR→ROM, + SPC700 SFX
+```
+
+**See it & the data**
+```
+docs/                       the GitHub Pages showcase site (image-forward, shareable)
+reports/                    self-contained comparison pages (diffusion-vs-SVG · ×8-vs-×16)
+evidence/                   montages · on-hardware screenshots · the gameplay GIF/MP4
 example_cosmicjazz/         a runnable SNES match-3 the sprites went into (build + play)
-END_TO_END.md               text → sprite → CHR → running ROM, with the hardware gotchas
-TUTORIAL_sound_effects.md   standalone how-to (SPC700 SFX + the queued-load gotcha)
+zimage_raw/ · zimage_sets/ · zimage_sets2/   the Z-Image Turbo rasters behind the three sets
+palettes/                   fixed palette banks for hard-locking
 ```
 
 ## Demonstration — sprites on real hardware
