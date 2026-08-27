@@ -50,9 +50,15 @@ td.lad.dead{border-color:#4a2733}
 td.lad.sweet::after{content:"quality";display:block;font-family:var(--mono);font-size:10px;color:var(--gold);margin-top:3px}
 td.lad.speed::after{content:"speed";display:block;font-family:var(--mono);font-size:10px;color:var(--pink);margin-top:3px}
 .time{font-family:var(--mono);font-size:12.5px;color:var(--dim);margin:12px 0 0}.time b{color:var(--ink)}
-.foot{margin-top:52px;padding-top:20px;border-top:1px solid var(--line);color:var(--dim);font-size:14px;font-family:var(--mono)}
+.topbar{position:sticky;top:0;z-index:9;display:flex;justify-content:space-between;align-items:center;padding:12px 22px;background:rgba(18,16,26,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);margin:-56px -24px 0}
+.topbar a{font-family:var(--mono);text-decoration:none}.topbar .home{font-weight:700;color:var(--ink)}.topbar .home b{color:var(--pink)}
+.topbar .ghl{font-size:13px;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 12px}.topbar .ghl:hover{border-color:var(--gold);color:var(--gold)}
+.backhome{text-align:center;margin-top:40px}.backhome a{font-family:var(--mono);font-size:17px;color:var(--gold);text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:11px 20px;display:inline-block;margin:6px}.backhome a:hover{border-color:var(--gold)}
+.foot{margin-top:44px;padding-top:20px;border-top:1px solid var(--line);color:var(--dim);font-size:14px;font-family:var(--mono)}
 a{color:var(--gold)}
 </style>
+<div class="topbar"><a class="home" href="https://pottokao-dotcom.github.io/prompt2sprite/">prompt2<b>sprite</b></a>
+  <a class="ghl" href="https://github.com/pottokao-dotcom/prompt2sprite" target="_blank" rel="noopener">★ View on GitHub ↗</a></div>
 <div class="wrap">
   <div class="eyebrow">Experiment · 2026-08-27 · GX10</div>
   <h1>Z-Image Turbo → <span class="accent">SNES sprites</span></h1>
@@ -197,6 +203,7 @@ a{color:var(--gold)}
     <tr><td>Whole-set coherence (H4)</td><td class="v mid">via shared bank</td><td>per-image model; one fixed/shared palette unifies the set, same as the SVG theme</td></tr>
   </table>
 
+  <div class="backhome"><a href="https://pottokao-dotcom.github.io/prompt2sprite/">← prompt2sprite</a><a href="https://github.com/pottokao-dotcom/prompt2sprite" target="_blank" rel="noopener">GitHub repo ↗</a></div>
   <div class="foot">generator: Z-Image Turbo (nvfp4, ComfyUI @ GX10) · back-end: prompt2sprite/diffuse_quant.py ·
   judge: Claude Opus 4.8 · sprites are generated, no third-party assets</div>
 </div>
