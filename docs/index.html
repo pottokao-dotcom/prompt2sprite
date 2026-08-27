@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>prompt2sprite — a text prompt → a whole retro game's sprites</title>
+<meta name="description" content="Type a prompt, get a coherent set of hardware-legal SNES pixel-art sprites. Two front-ends (LLM-SVG or Z-Image Turbo diffusion), one shared quantise back-end.">
+<meta property="og:title" content="prompt2sprite — text prompt → retro game sprites">
+<meta property="og:description" content="One prompt → a coherent, hardware-legal SNES sprite set. Diffusion or SVG front-end, shared palette back-end.">
+<meta property="og:image" content="https://pottokao-dotcom.github.io/prompt2sprite/img/exp3_chibi_mascots.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{--bg:#100e18;--panel:#1b1626;--ink:#ece7f2;--dim:#a99fb8;--gold:#ffd640;--pink:#ff5a79;--cyan:#57e0d8;
+  --line:#2c2438;--t1:#221b2e;--t2:#181322;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,sans-serif;line-height:1.6}
+a{color:var(--gold);text-decoration:none}
+header{position:sticky;top:0;z-index:9;display:flex;justify-content:space-between;align-items:center;
+  padding:14px 22px;background:rgba(16,14,24,.82);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.logo{font-family:var(--mono);font-weight:700;letter-spacing:.02em}.logo b{color:var(--pink)}
+.gh{font-family:var(--mono);font-size:13px;border:1px solid var(--line);border-radius:8px;padding:7px 12px;color:var(--ink)}
+.gh:hover{border-color:var(--gold);color:var(--gold)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 22px}
+.hero{text-align:center;padding:64px 22px 40px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--mono);font-weight:700;font-size:clamp(30px,6vw,54px);line-height:1.08;margin:16px 0 12px;text-wrap:balance}
+h1 .a{color:var(--pink)}h1 .b{color:var(--cyan)}
+.tag{color:var(--dim);font-size:19px;max-width:60ch;margin:0 auto}
+.hero img{image-rendering:pixelated;width:min(760px,94%);margin:34px auto 0;display:block;border-radius:12px;border:1px solid var(--line);background:#0c0a12}
+section{padding:46px 0;border-top:1px solid var(--line)}
+h2{font-family:var(--mono);font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:0 0 6px}
+.sub{color:var(--dim);max-width:64ch;margin:0 0 22px}
+.shot{width:100%;border-radius:12px;border:1px solid var(--line);background:#0c0a12;display:block}
+.two{display:grid;grid-template-columns:1.1fr .9fr;gap:22px;align-items:center}@media(max-width:720px){.two{grid-template-columns:1fr}}
+.px{image-rendering:pixelated}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:640px){.cards{grid-template-columns:1fr}}
+.card{display:block;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;transition:border-color .15s}
+.card:hover{border-color:var(--cyan)}
+.card h3{font-family:var(--mono);margin:0 0 6px;font-size:16px;color:var(--ink)}
+.card p{color:var(--dim);margin:0;font-size:14px}.card .go{color:var(--cyan);font-family:var(--mono);font-size:13px;margin-top:10px;display:inline-block}
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0}
+.pill{font-family:var(--mono);font-size:12px;color:var(--dim);border:1px solid var(--line);border-radius:20px;padding:5px 12px}
+.pill b{color:var(--gold)}
+footer{border-top:1px solid var(--line);padding:34px 22px 60px;text-align:center}
+footer .gh{display:inline-block;margin-bottom:14px}
+.credit{font-family:var(--mono);font-size:12.5px;color:var(--dim);max-width:70ch;margin:0 auto}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">prompt2<b>sprite</b></div>
+  <a class="gh" href="https://github.com/pottokao-dotcom/prompt2sprite" target="_blank" rel="noopener">★ View on GitHub ↗</a>
+</header>
+
+<div class="hero">
+  <div class="eyebrow">text prompt → retro-console pixel art</div>
+  <h1>One prompt → a whole game's <span class="a">sprites</span></h1>
+  <p class="tag">Not a lone icon — a coherent set of characters, pieces and backgrounds, quantised to a
+  hardware-legal SNES palette and ready to drop into a ROM.</p>
+  <img class="px" src="img/exp3_chibi_mascots.png" alt="Two themed sets of chibi mascot sprites — jazz rabbit, rock groundhog, astronaut rabbit, alien groundhog">
+  <div class="pills">
+    <span class="pill">generator <b>Z-Image Turbo</b> / Qwen3.8-27B</span>
+    <span class="pill">judge <b>Claude Opus 4.8</b></span>
+    <span class="pill"><b>32×64</b> chibi mascots</span>
+    <span class="pill"><b>16²</b> pieces for 6×6+ boards</span>
+  </div>
+</div>
+
+<div class="wrap">
+  <section>
+    <h2>A coherent themed set, from one theme</h2>
+    <p class="sub">Two themes — <b>Cosmic Jazz</b> and <b>Deep Space</b> — each with two mascots × 5 poses,
+    six pieces (at 32² and 16²), and backgrounds. A shared palette makes the whole set cohere and fit one
+    16-colour bank.</p>
+    <img class="px shot" src="img/exp3_pieces16.png" alt="16×16 game pieces: candies and planets">
+  </section>
+
+  <section>
+    <h2>It runs on real hardware</h2>
+    <div class="two">
+      <img class="px shot" src="img/cosmicjazz_gameplay.gif" alt="COSMIC JAZZ match-3 gameplay on an emulated SNES">
+      <div>
+        <p class="sub">Generated sprites → CHR → a buildable PVSnesLib match-3, shown under Mesen2. The
+        pieces, mascots and their animation all come from the pipeline; the game around them is a
+        showcase.</p>
+        <img class="px shot" src="img/onROM_board_plus_mascots.png" alt="6×6 board with mascots on an emulated SNES" style="margin-top:14px">
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Two ways to draw, one back-end</h2>
+    <p class="sub">The front-end is swappable — an LLM emitting <b>SVG</b> (no GPU), or <b>Z-Image Turbo</b>
+    diffusion (a GPU, better quality). The downscale + perceptual quantise + palette lock are identical.</p>
+    <img class="shot" src="img/old_vs_new.png" alt="Quantiser comparison: old LANCZOS vs modal">
+    <div class="cards" style="margin-top:22px">
+      <a class="card" href="reports/diffusion_vs_svg.html">
+        <h3>Report · Diffusion vs SVG</h3>
+        <p>Quality, the resolution ladder (why ×4+ and never native), and the palette lock — measured.</p>
+        <span class="go">Open report ↗</span>
+      </a>
+      <a class="card" href="reports/sets_x8_vs_x16.html">
+        <h3>Report · ×8 vs ×16</h3>
+        <p>Two full themed sets at two sampling rates — is the cheaper ×8 enough? Pose by pose.</p>
+        <span class="go">Open report ↗</span>
+      </a>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <a class="gh" href="https://github.com/pottokao-dotcom/prompt2sprite" target="_blank" rel="noopener">★ prompt2sprite on GitHub ↗</a>
+  <p class="credit">Methodology + evidence: every decision chosen by an experiment, scored on
+  recognisability. Sprites generated by Z-Image Turbo / Qwen3.8-27B; judged by Claude Opus 4.8. All
+  sprites are generated — no third-party assets. MIT.</p>
+</footer>
+</body>
+</html>
